@@ -1,0 +1,20 @@
+{
+  "id": "model-providers",
+  "name": "Model providers",
+  "description": "Manage model endpoints, credentials and selected models for Claude Code, Codex, OpenCode, Pi and OMP.",
+  "requirements": {
+    "paseo": ">=0.12.0"
+  },
+  "translations": {
+    "zh-CN": {
+      "name": "模型供应商",
+      "description": "统一管理 Claude Code、Codex、OpenCode、Pi 和 OMP 的模型接口、凭据与模型列表。"
+    }
+  },
+  "media": [
+    "assets/providers-en.png",
+    "assets/editor-en.png",
+    "assets/providers-zh-CN.png",
+    "assets/editor-zh-CN.png"
+  ]
+}

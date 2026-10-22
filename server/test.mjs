@@ -1,0 +1,100 @@
+import assert from 'node:assert/strict';
+import { readFile, writeFile, mkdir, mkdtemp, symlink, rm, stat } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { resolve, join } from 'node:path';
+import { createRequire } from 'node:module';
+import ts from 'typescript';
+const temp = await mkdtemp(join(tmpdir(), 'paseo-model-providers-test-'));
+const originalHome = process.env.PASEO_HOME;
+const originalFetch = globalThis.fetch;
+process.env.PASEO_HOME = join(temp,'home');
+async function compile(file) {
+ const source = await readFile(file,'utf8');
+ const target = join(temp, file.replace(/\.ts$/,'.js'));
+ await mkdir(resolve(target,'..'),{recursive:true});
+ await writeFile(target,ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText);
+}
+try {
+ await symlink(resolve('node_modules'),join(temp,'node_modules'));
+ for (const file of ['index.server.ts','shared/contracts.ts','server/adapters.ts','server/store.ts','server/probe.ts','server/models.ts','server/agent-extension.ts']) await compile(file);
+ const require=createRequire(join(temp,'entry.cjs'));
+ const {supplierSchema,compatible,aliasId,stateRpc,saveRpc,probeRpc}=require(join(temp,'shared/contracts.js'));
+ const {buildAlias}=require(join(temp,'server/adapters.js'));
+ const {parseModels,discoverModels}=require(join(temp,'server/models.js'));
+ const {probe,probeRequest}=require(join(temp,'server/probe.js'));
+ const {readStore}=require(join(temp,'server/store.js'));
+ const supplier={id:'example',name:'Example',protocol:'anthropic',anthropicAuth:'api-key',baseUrl:'https://example.com',models:['sample-model'],agents:['claude'],enabled:true,contextWindow:32768,maxTokens:1024,key:'test-only-secret'};
+ assert.equal(supplierSchema.safeParse({...supplier,baseUrl:'https://user:pass@example.com'}).success,false);
+ assert.equal(supplierSchema.safeParse({...supplier,id:'../overwrite'}).success,false);
+ assert.equal(compatible('chat-completions','codex'),false);
+ assert.equal(compatible('responses','claude'),false);
+ for(const [engine,protocol] of [['claude','anthropic'],['codex','responses'],['opencode','chat-completions'],['pi','responses'],['omp','anthropic']]) {
+  const a=buildAlias({...supplier,protocol},engine,'/tmp/extension.mjs');
+  assert.equal(a.extends,engine);assert.equal(a.models.length,1);
+  assert.equal(a.enabled,true);
+ }
+ assert.throws(()=>buildAlias({...supplier,protocol:'chat-completions'},'claude',''),/不兼容/);
+ assert.equal(probeRequest(supplier,'sample-model').url,'https://example.com/v1/messages');
+ assert.equal(probeRequest({...supplier,protocol:'responses',baseUrl:'https://example.com/v1/'},'sample-model').url,'https://example.com/v1/responses');
+ globalThis.fetch=async()=>Response.json({content:[{type:'text',text:'OK'}]});
+ assert.equal((await probe(supplier,'sample-model')).ok,true);
+ globalThis.fetch=async()=>Response.json({unexpected:true});
+ assert.equal((await probe(supplier,'sample-model')).ok,false);
+ globalThis.fetch=async()=>new Response(supplier.key,{status:401});
+ assert.equal(JSON.stringify(await probe(supplier,'sample-model')).includes(supplier.key),false);
+ assert.deepEqual(parseModels({data:[{id:'model-a',display_name:'Model A'},{id:'model-a',display_name:'Model A'},{id:'invalid id'},{id:2}]}),[{id:'model-a',name:'Model A'}]);
+ assert.throws(()=>parseModels({models:[]}),/格式/);
+ const requests=[];
+ globalThis.fetch=async(url,options)=>{
+  requests.push({url,options});
+  return Response.json(requests.length===1?{data:[{id:'model-a'}],has_more:true,last_id:'model-a'}:{data:[{id:'model-b'}],has_more:false});
+ };
+ const catalog=await discoverModels(supplier);
+ assert.equal(catalog.ok,true);assert.equal(catalog.models.length,2);
+ assert(requests[1].url.includes('after_id=model-a'));
+ assert.equal(requests[0].options.headers['x-api-key'],supplier.key);
+ globalThis.fetch=async()=>new Response(supplier.key,{status:403});
+ const denied=await discoverModels(supplier);assert.equal(denied.ok,false);assert.equal(JSON.stringify(denied).includes(supplier.key),false);
+ globalThis.fetch=async()=>Response.json({data:[{id:'same'}],has_more:true,last_id:'same'});
+ assert.equal((await discoverModels(supplier)).ok,false);
+ const handlers=new Map();
+ require(join(temp,'index.server.js')).default({handle:(rpc,fn)=>handlers.set(rpc.name,fn)});
+ const state=()=>handlers.get(stateRpc.name)({},{});
+ const official={claude:{enabled:true},codex:{enabled:true},pi:{enabled:true}};
+ let providers=structuredClone(official),failPatch=false;
+ const context={paseo:{config:{get:async()=>({config:{providers}}),patch:async({providers:patch})=>{
+  if(failPatch)throw Error('simulated');providers={...providers,...patch};
+ }}}};
+ let loaded=await state();
+ await handlers.get(saveRpc.name)({...supplier,revision:loaded.revision},context);
+ loaded=await state();
+ assert.equal(loaded.suppliers.length,1);
+ assert.equal(JSON.stringify(loaded).includes(supplier.key),false);
+ assert.deepEqual(Object.fromEntries(Object.keys(official).map(k=>[k,providers[k]])),official);
+ assert.equal(providers[aliasId(supplier.id,'claude')].env.ANTHROPIC_API_KEY,supplier.key);
+ assert.equal(buildAlias({...supplier,anthropicAuth:'bearer'},'claude','').env.ANTHROPIC_AUTH_TOKEN,supplier.key);
+ await assert.rejects(handlers.get(saveRpc.name)({...supplier,revision:'stale'},context),/其他窗口/);
+ await handlers.get(saveRpc.name)({...supplier,key:'',enabled:false,revision:loaded.revision},context);
+ assert.equal((await readStore()).suppliers[0].key,supplier.key);
+ assert.equal(providers[aliasId(supplier.id,'claude')].enabled,false);
+ loaded=await state();failPatch=true;
+ await assert.rejects(handlers.get(saveRpc.name)({...supplier,name:'Changed',revision:loaded.revision},context),/恢复/);
+ assert.equal((await readStore()).suppliers[0].name,'Example');failPatch=false;
+ assert.equal((await stat(join(temp,'home/model-providers/suppliers.json'))).mode&0o777,0o600);
+ providers['mp-collision-claude']={extends:'claude',label:'Owned by user'};
+ loaded=await state();
+ await assert.rejects(handlers.get(saveRpc.name)({...supplier,id:'collision',revision:loaded.revision},context),/冲突/);
+ const source=await readFile(join(temp,'home/model-providers/agent-extension.mjs'),'utf8');
+ assert.equal(source.includes(supplier.key),false);
+ const ext=await import('file://'+join(temp,'home/model-providers/agent-extension.mjs'));
+ process.env.PASEO_MODEL_CONFIG=JSON.stringify({id:'example',baseUrl:'https://example.com',api:'anthropic-messages',models:['sample-model'],contextWindow:32768,maxTokens:1024});
+ process.env.PASEO_MODEL_KEY='fake';let registered;
+ ext.default({registerProvider:(id,config)=>registered={id,config}});
+ assert.equal(registered.id,'example');assert.equal(registered.config.models[0].id,'sample-model');
+ console.log('PASS: model catalog parsing, pagination and failures; 5 adapters, protocol probes, official config isolation, secret redaction, revision conflict, rollback, collision protection, file permissions and generated extension');
+} finally {
+ globalThis.fetch=originalFetch;
+ if(originalHome===undefined)delete process.env.PASEO_HOME;else process.env.PASEO_HOME=originalHome;
+ delete process.env.PASEO_MODEL_CONFIG;delete process.env.PASEO_MODEL_KEY;
+ await rm(temp,{recursive:true,force:true});
+}
