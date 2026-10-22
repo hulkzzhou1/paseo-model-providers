@@ -2,7 +2,7 @@ import type { PluginServerContext } from "@getpaseo/plugin/server";
 import { join } from "node:path";
 import { writeFile, mkdir } from "node:fs/promises";
 import agentExtension from "./server/agent-extension";
-import { engines, aliasId, compatible, stateRpc, saveRpc, probeRpc, discoverRpc } from "./shared/contracts";
+import { engines, aliasId, compatible, requestModelId, stateRpc, saveRpc, probeRpc, discoverRpc } from "./shared/contracts";
 import { buildAlias } from "./server/adapters";
 import { storeDir, readStore, writeStore } from "./server/store";
 import { discoverModels } from "./server/models";
@@ -20,6 +20,7 @@ export default function contribute(server: PluginServerContext) {
       const state = await readStore();
       if (input.revision !== state.revision) throw new Error("配置已被其他窗口修改，请刷新后重试");
       if (input.maxTokens > input.contextWindow) throw new Error("最大输出不能超过上下文窗口");
+      if (new Set(input.models.map(model => requestModelId(input, model))).size !== input.models.length) throw new Error("同一供应商内的实际请求 ID 不能重复");
       if (input.agents.some(engine => !compatible(input.protocol, engine))) throw new Error("所选 Agent 与协议不兼容");
       const { revision: _revision, key, ...supplier } = input;
       const previous = state.suppliers.find(item => item.id === input.id);
@@ -53,7 +54,7 @@ export default function contribute(server: PluginServerContext) {
     const { suppliers } = await readStore();
     const supplier = suppliers.find(item => item.id === id);
     if (!supplier || !supplier.models.includes(model)) throw new Error("供应商或模型不存在，请刷新配置");
-    return probe(supplier, model);
+    return probe(supplier, requestModelId(supplier, model));
   });
   return () => {};
 }

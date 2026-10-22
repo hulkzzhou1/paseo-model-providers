@@ -1,4 +1,12 @@
 export type Language = "en" | "zh-CN";
+export function resolveLanguage(locales: readonly string[]): Language {
+  for (const locale of locales) {
+    const normalized = locale.toLowerCase();
+    if (normalized === "en" || normalized.startsWith("en-")) return "en";
+    if (normalized === "zh" || normalized === "zh-cn" || normalized.startsWith("zh-hans")) return "zh-CN";
+  }
+  return "en";
+}
 const english: Record<string, string> = {
   "请填写有效的接口地址后再获取，也可以手动填写模型 ID。": "Enter a valid API URL or add model IDs manually.",
   "已保存；可在新建 Agent 的供应商列表中选择": "Saved. Select this provider when creating an agent.",
@@ -42,6 +50,14 @@ const english: Record<string, string> = {
   "连接测试会向接口发送简短请求和工具定义，可能消耗少量 Token。测试通过不代表完整开发、MCP 或工具执行已验证。Pi/OMP 暂按文本输入、无额外推理、费用未知配置。": "Connection tests send a short prompt and tool definition and may use billable tokens. They do not verify complete agent or MCP workflows. Pi/OMP models use text input, no extra reasoning and unknown pricing.",
   "编辑供应商": "Edit provider",
   "连接设置": "Connection",
+  "供应商预设": "Provider preset",
+  "自定义": "Custom",
+  "选择预设会填写连接信息、模型和容量，并清空已输入的密钥。": "A preset fills in connection settings, models and limits, and clears the entered API key.",
+  "已填入预设；可获取最新模型列表，所有设置均可修改。": "Preset applied. Fetch the latest model list; all settings remain editable.",
+  "模型 ID 映射": "Model ID mapping",
+  "左侧为选择时的模型别名；填写实际请求 ID，留空则使用别名本身。": "Aliases are shown on the left. Enter the API model ID, or leave blank to use the alias itself.",
+  "实际请求 ID": "API model ID",
+  "同一供应商内的实际请求 ID 不能重复": "API model IDs must be unique within a provider.",
   "选择接口协议，填写供应商提供的基础地址与凭据。": "Choose the API protocol, base URL and credentials from your provider.",
   "显示名称": "Display name",
   "例如：内部模型网关": "For example: Team model gateway",
@@ -50,6 +66,8 @@ const english: Record<string, string> = {
   "小写字母、数字与连字符": "Lowercase letters, numbers and hyphens",
   "接口协议": "API protocol",
   "API 基础地址": "API base URL",
+  "可修改为兼容当前协议的代理或网关地址": "You can use a proxy or gateway URL compatible with the selected protocol",
+  "填写兼容网关的基础路径，如 /v2；不要包含 /chat/completions 等请求路径": "Enter the compatible gateway's base path, such as /v2, without request paths like /chat/completions",
   "鉴权方式": "Authentication",
   "Bearer Token（内部网关）": "Bearer token (gateway)",
   "API 密钥": "API key",
@@ -58,11 +76,21 @@ const english: Record<string, string> = {
   "已保存的密钥不会显示": "Saved key is hidden",
   "输入 API Key": "Enter API key",
   "模型与 Agent": "Models and agents",
+  "模型与路由": "Models and routing",
+  "请检查接口地址，也可以手动填写模型 ID。": "Check the API URL, or enter model IDs manually.",
+  "列表由供应商返回，不代表模型调用权限或推理兼容性已验证。": "Catalog returned by the provider. Model access and inference compatibility are not verified.",
+  "供应商没有返回可用目录项，可手动填写。": "The provider returned no usable catalog entries. Add IDs manually.",
+  "选择启用的模型，按需映射到网关中的实际 ID。": "Choose enabled models and optionally map aliases to your gateway's API IDs.",
+  "Agent 设置": "Agent settings",
+  "选择使用此接口的 Agent；容量在各模型行中设置。": "Choose which agents use this endpoint. Set limits in each model row.",
+  "每个模型单独配置容量，支持 K/M 简写；留空使用原有默认值，加载目录会补齐未填写的容量。容量用于 Pi/OMP。": "Set limits per model with K/M shorthand. Blank fields use existing defaults; loading fills missing limits from the catalog. Limits apply to Pi/OMP.",
   "选择启用的模型，以及与接口协议兼容的 Agent。": "Select enabled models and agents compatible with this protocol.",
   "Codex 需要 OpenAI Responses 协议；Claude 需要 Anthropic Messages 协议。灰色选项表示与当前协议不兼容。": "Codex requires OpenAI Responses. Claude requires Anthropic Messages. Disabled options are incompatible with the selected protocol.",
   "Pi / OMP 模型容量，按实际规格填写": "Pi / OMP model limits: enter the provider's specifications",
   "上下文窗口": "Context window",
   "最大输出": "Maximum output",
+  "支持 K/M 简写或完整数字；1K = 1000 Token": "Use K/M shorthand or a full number; 1K = 1000 tokens",
+  "请输入完整 Token 数或 K/M 简写，例如 256K、1M": "Enter a token count or K/M shorthand, such as 256K or 1M",
   "启用供应商": "Enable provider",
   "新建或重新打开会话时生效": "Applies to new or reopened sessions",
   "保存后将新增独立的 Paseo 接入入口，官方订阅保持原样。已有会话不会热切换。": "Saving adds independent Paseo provider entries. Existing sessions do not switch endpoints live.",
@@ -84,7 +112,15 @@ const english: Record<string, string> = {
   "没有匹配的模型": "No matching models",
   "填写连接信息后获取模型列表，再勾选允许 Agent 使用的模型。": "Enter the connection settings, fetch the catalog and select models for your agents.",
   "手动填写模型 ID": "Enter model IDs manually",
-  "模型 ID": "Model IDs",
+  "模型 ID": "Model ID",
+  "添加模型": "Add model",
+  "加载模型": "Load models",
+  "正在加载…": "Loading…",
+  "移除模型": "Remove model",
+  "模型 ID 不能重复": "Model IDs must be unique.",
+  "每行一个模型；可手动填写，或点击「加载模型」自动填入。实际请求 ID 留空时使用模型 ID。": "Edit one model per row, or use Load models to fill the form. Leave API model ID blank to use the model ID.",
+  "点击「添加模型」创建表单行，或点击「加载模型」自动填入。": "Add a model row or use Load models to fill the form.",
+  "已自动填充至 100 个模型；可移除现有行后手动添加其他模型。": "Filled up to 100 models. Remove existing rows to add other models manually.",
   "每行一个；适用于没有模型列表接口的供应商": "One per line, for providers without a model catalog endpoint",
   "配置已被其他窗口修改，请刷新后重试": "Configuration changed in another window. Refresh and try again.",
   "最大输出不能超过上下文窗口": "Maximum output must not exceed the context window.",

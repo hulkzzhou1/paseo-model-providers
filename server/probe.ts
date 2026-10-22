@@ -1,19 +1,19 @@
 import type { StoredSupplier } from "./adapters";
+import { apiRoot } from "./endpoints";
 export function probeRequest(s: StoredSupplier, model: string) {
-  const root = s.baseUrl.replace(/\/+$/, "");
+  const root = apiRoot(s.baseUrl);
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   const tool = { name: "probe", description: "Connectivity check. Return no tool calls.", input_schema: { type: "object", properties: {} } };
   if (s.protocol === "anthropic") {
     if (s.anthropicAuth === "bearer") headers.Authorization = `Bearer ${s.key}`;
     else headers["x-api-key"] = s.key;
     headers["anthropic-version"] = "2023-06-01";
-    return { url: `${root.endsWith('/v1') ? root : root + '/v1'}/messages`, headers, body: { model, max_tokens: 32, messages: [{ role: "user", content: "Reply OK." }], tools: [tool] } };
+    return { url: `${root}/messages`, headers, body: { model, max_tokens: 32, messages: [{ role: "user", content: "Reply OK." }], tools: [tool] } };
   }
   headers.Authorization = `Bearer ${s.key}`;
-  const base = root.endsWith('/v1') ? root : `${root}/v1`;
   return s.protocol === "responses"
-    ? { url: `${base}/responses`, headers, body: { model, input: "Reply OK.", max_output_tokens: 64, tools: [{ type: "function", name: "probe", description: tool.description, parameters: tool.input_schema }] } }
-    : { url: `${base}/chat/completions`, headers, body: { model, max_tokens: 32, messages: [{ role: "user", content: "Reply OK." }], tools: [{ type: "function", function: { name: "probe", description: tool.description, parameters: tool.input_schema } }] } };
+    ? { url: `${root}/responses`, headers, body: { model, input: "Reply OK.", max_output_tokens: 64, tools: [{ type: "function", name: "probe", description: tool.description, parameters: tool.input_schema }] } }
+    : { url: `${root}/chat/completions`, headers, body: { model, max_tokens: 32, messages: [{ role: "user", content: "Reply OK." }], tools: [{ type: "function", function: { name: "probe", description: tool.description, parameters: tool.input_schema } }] } };
 }
 export async function probe(s: StoredSupplier, model: string) {
   const request = probeRequest(s, model);

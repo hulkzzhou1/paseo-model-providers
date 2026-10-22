@@ -8,9 +8,10 @@ export default function(api: { registerProvider: (name: string, config: Record<s
     api: config.api,
     ...(config.api === "anthropic-messages" && config.anthropicAuth === "bearer" ? { headers: { Authorization: `Bearer ${process.env.PASEO_MODEL_KEY}` } } : {}),
     models: config.models.map((id: string) => ({
-      id, name: id, reasoning: false, input: ['text'],
+      id, name: config.modelLabels?.[id] ?? id, reasoning: false, input: ['text'],
       cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-      contextWindow: config.contextWindow, maxTokens: config.maxTokens,
+      contextWindow: config.modelLimits?.[id]?.contextWindow ?? config.contextWindow,
+      maxTokens: config.modelLimits?.[id]?.maxTokens ?? config.maxTokens,
     })),
   });
 }
