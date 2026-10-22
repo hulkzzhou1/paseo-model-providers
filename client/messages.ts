@@ -77,6 +77,8 @@ const english: Record<string, string> = {
   "输入 API Key": "Enter API key",
   "模型与 Agent": "Models and agents",
   "模型与路由": "Models and routing",
+  "模型填写说明": "Model entry notes",
+  "容量用于 Pi/OMP，支持 K/M；留空沿用原有默认值。": "Pi/OMP limits accept K/M. Leave blank for existing defaults.",
   "请检查接口地址，也可以手动填写模型 ID。": "Check the API URL, or enter model IDs manually.",
   "列表由供应商返回，不代表模型调用权限或推理兼容性已验证。": "Catalog returned by the provider. Model access and inference compatibility are not verified.",
   "供应商没有返回可用目录项，可手动填写。": "The provider returned no usable catalog entries. Add IDs manually.",

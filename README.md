@@ -36,7 +36,7 @@ The DeepSeek preset uses Chat Completions with `deepseek-flash` and `deepseek-v4
 
 ![Provider editor with sample data](assets/editor-en.png)
 
-The editor groups connection, model routing and agent settings into three sections. Save and cancel stay visible while the form scrolls. Loading models merges new rows into the form without replacing manual IDs or mappings; repeated or failed loads preserve drafts. Each provider supports up to 100 model rows; excess catalog entries are reported.
+The editor shows a provider summary above tabs for connection, model routing and agent settings. Switching tabs preserves drafts, and validation returns to the relevant tab. Save and cancel stay visible while the active tab scrolls. Loading models merges new rows into the form without replacing manual IDs or mappings; repeated or failed loads preserve drafts. Each provider supports up to 100 model rows; excess catalog entries are reported.
 
 Changes apply to new or reopened sessions. Existing sessions do not switch endpoints live. Custom APIs use the selected provider's API quota, independently of official subscriptions.
 
