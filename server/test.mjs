@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFile, writeFile, mkdir, mkdtemp, symlink, rm, stat } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, mkdtemp, symlink, rm, stat, chmod } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { createRequire } from 'node:module';
@@ -26,11 +26,12 @@ async function compile(file) {
 }
 try {
  await symlink(resolve('node_modules'),join(temp,'node_modules'));
- for (const file of ['index.server.ts','shared/contracts.ts','shared/presets.ts','server/adapters.ts','server/store.ts','server/probe.ts','server/endpoints.ts','server/models.ts','server/agent-extension.ts']) await compile(file);
+ for (const file of ['index.server.ts','shared/contracts.ts','shared/presets.ts','server/adapters.ts','server/codex-models.ts','server/store.ts','server/probe.ts','server/endpoints.ts','server/models.ts','server/agent-extension.ts']) await compile(file);
  const require=createRequire(join(temp,'entry.cjs'));
  const {supplierSchema,compatible,aliasId,requestModelId,modelId,stateRpc,saveRpc,probeRpc,discoverRpc}=require(join(temp,'shared/contracts.js'));
  const {supplierPresets}=require(join(temp,'shared/presets.js'));
  const {buildAlias}=require(join(temp,'server/adapters.js'));
+ const {codexCatalog}=require(join(temp,'server/codex-models.js'));
  const {parseModels,discoverModels}=require(join(temp,'server/models.js'));
  const {probe,probeRequest}=require(join(temp,'server/probe.js'));
  const {readStore}=require(join(temp,'server/store.js'));
@@ -69,7 +70,7 @@ try {
   assert.equal(adapter.models[0].label,'sample-model');
   if(engine==='opencode') {
    const config=JSON.parse(adapter.env.OPENCODE_CONFIG_CONTENT).provider[aliasId(supplier.id,engine)];
-   assert.deepEqual(config.models,{'gateway/actual-model':{name:'sample-model'}});
+   assert.deepEqual(config.models,{'gateway/actual-model':{name:'sample-model',limit:{context:32768,output:1024}}});
   }
   if(engine==='pi'||engine==='omp') {
    const config=JSON.parse(adapter.env.PASEO_MODEL_CONFIG);
@@ -96,6 +97,22 @@ try {
  assert.equal(supplierSchema.safeParse({...supplier,modelLimits:{'sample-model':{contextWindow:1024,maxTokens:4096}}}).success,false);
  const sizedConfig=JSON.parse(buildAlias(sizedSupplier,'pi','').env.PASEO_MODEL_CONFIG);
  assert.deepEqual(sizedConfig.modelLimits,{'gateway/actual-model':individualLimits['sample-model'],'small-model':individualLimits['small-model']});
+ const template={slug:'native-model',priority:1,base_instructions:'native instructions',shell_type:'unified_exec',effective_context_window_percent:95,context_window:272000,max_context_window:272000,auto_compact_token_limit:200000};
+ const nativeCatalog=codexCatalog(sizedSupplier,{models:[template]});
+ assert.deepEqual(nativeCatalog.models.map(model=>[model.slug,model.display_name,model.context_window,model.max_context_window]),[['gateway/actual-model','sample-model',1000000,1000000],['small-model','small-model',128000,128000]]);
+ assert.equal(nativeCatalog.models[0].base_instructions,template.base_instructions);
+ assert.equal(nativeCatalog.models[0].effective_context_window_percent,95);
+ assert.equal(nativeCatalog.models[1].auto_compact_token_limit,null);
+ assert.equal(template.context_window,272000,'Catalog generation must not mutate native metadata');
+ assert.equal(codexCatalog(supplier,{models:[template]}).models[0].context_window,32768,'Legacy provider defaults must survive');
+ const native={...template,slug:'gateway/actual-model',base_instructions:'matching model instructions'};
+ assert.equal(codexCatalog(sizedSupplier,{models:[template,native]}).models[0].base_instructions,native.base_instructions);
+ assert.throws(()=>codexCatalog(sizedSupplier,{models:[]}),/目录为空/);
+ const withCatalog=buildAlias({...sizedSupplier,protocol:'responses'},'codex','/tmp/extension.mjs','/tmp/model catalog.json');
+ assert(withCatalog.command.includes('model_catalog_json="/tmp/model catalog.json"'));
+ const openCodeModels=JSON.parse(buildAlias({...sizedSupplier,protocol:'chat-completions'},'opencode','').env.OPENCODE_CONFIG_CONTENT).provider['mp-example-opencode'].models;
+ assert.deepEqual(openCodeModels['gateway/actual-model'].limit,{context:1000000,output:64000});
+ assert.deepEqual(openCodeModels['small-model'].limit,{context:128000,output:16000});
  assert.throws(()=>buildAlias({...supplier,protocol:'chat-completions'},'claude',''),/不兼容/);
  assert.equal(probeRequest(supplier,'sample-model').url,'https://example.com/v1/messages');
  assert.equal(probeRequest({...supplier,protocol:'responses',baseUrl:'https://example.com/v1/'},'sample-model').url,'https://example.com/v1/responses');
@@ -203,6 +220,33 @@ try {
  loaded=await state();
  await handlers.get(saveRpc.name)({...supplier,revision:loaded.revision},context);
  assert.equal(providers[aliasId(supplier.id,'claude')].env.ANTHROPIC_CUSTOM_HEADERS,'');
+ // Exercise the save RPC without requiring a Codex installation in the unit suite.
+ const nativeBin=join(temp,'bin');await mkdir(nativeBin);
+ const codexStub=join(nativeBin,'codex');
+ const oldPath=process.env.PATH;
+ await writeFile(codexStub,`#!${process.execPath}\nprocess.stdout.write(${JSON.stringify(JSON.stringify({models:[template]}))});\n`);
+ await chmod(codexStub,0o700);process.env.PATH=nativeBin+':'+oldPath;
+ try {
+  loaded=await state();
+  await handlers.get(saveRpc.name)({...sizedSupplier,protocol:'responses',agents:['codex'],revision:loaded.revision},context);
+  const firstCommand=providers['mp-example-codex'].command;
+  const catalogPath=JSON.parse(firstCommand.find(value=>value.startsWith('model_catalog_json=')).slice('model_catalog_json='.length));
+  const originalCatalog=await readFile(catalogPath,'utf8');
+  assert.equal(JSON.parse(originalCatalog).models[0].context_window,1000000);
+  assert.equal(originalCatalog.includes(supplier.key),false);
+  assert.equal((await stat(catalogPath)).mode&0o777,0o600);
+  loaded=await state();failPatch=true;
+  await assert.rejects(handlers.get(saveRpc.name)({...sizedSupplier,protocol:'responses',agents:['codex'],modelLimits:{...individualLimits,'sample-model':{contextWindow:512000,maxTokens:64000}},revision:loaded.revision},context),/恢复/);
+  failPatch=false;
+  assert.deepEqual(providers['mp-example-codex'].command,firstCommand);
+  assert.equal(await readFile(catalogPath,'utf8'),originalCatalog,'Failed saves must preserve the referenced native catalog');
+  await writeFile(codexStub,`#!${process.execPath}\nprocess.exit(1);\n`);
+  loaded=await state();
+  await assert.rejects(handlers.get(saveRpc.name)({...sizedSupplier,protocol:'responses',agents:['codex'],revision:loaded.revision},context),/更新 Codex CLI/);
+  assert.equal((await state()).revision,loaded.revision,'Catalog failures must not save a partial provider');
+  await handlers.get(saveRpc.name)({...sizedSupplier,protocol:'responses',agents:['codex'],enabled:false,revision:loaded.revision},context);
+  assert.equal(providers['mp-example-codex'].enabled,false,'An unavailable CLI must not prevent disabling a provider');
+ } finally {process.env.PATH=oldPath;failPatch=false;}
  providers['mp-collision-claude']={extends:'claude',label:'Owned by user'};
  loaded=await state();
  await assert.rejects(handlers.get(saveRpc.name)({...supplier,id:'collision',revision:loaded.revision},context),/冲突/);

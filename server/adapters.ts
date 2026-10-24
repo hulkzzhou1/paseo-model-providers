@@ -3,7 +3,7 @@ import { aliasId, compatible, modelId, requestModelId, limitsForModel } from "..
 import { apiRoot } from "./endpoints";
 
 export type StoredSupplier = Supplier & { key: string };
-export function buildAlias(s: StoredSupplier, engine: Engine, extensionPath: string) {
+export function buildAlias(s: StoredSupplier, engine: Engine, extensionPath: string, codexCatalogPath?: string) {
   if (!compatible(s.protocol, engine)) throw new Error("Agent 与接口协议不兼容");
   const id = aliasId(s.id, engine);
   const baseUrl = s.baseUrl.replace(/\/+$/, "");
@@ -17,9 +17,10 @@ export function buildAlias(s: StoredSupplier, engine: Engine, extensionPath: str
     // Paseo 0.12 appends /v1 to environment-based providers, including versioned paths.
     env = { OPENAI_BASE_URL: "", OPENAI_API_KEY: s.key };
     command = ["codex", "--config", `model_provider=${JSON.stringify(id)}`, "--config", `model_providers.${id}={ name = ${JSON.stringify(s.name)}, base_url = ${JSON.stringify(apiRoot(baseUrl))}, wire_api = "responses", env_key = "OPENAI_API_KEY", requires_openai_auth = false }`];
+    if (codexCatalogPath) command.push("--config", `model_catalog_json=${JSON.stringify(codexCatalogPath)}`);
   } else if (engine === "opencode") {
     const npm = s.protocol === "anthropic" ? "@ai-sdk/anthropic" : "@ai-sdk/openai-compatible";
-    env = { OPENCODE_CONFIG_CONTENT: JSON.stringify({ provider: { [id]: { npm, name: s.name, options: { baseURL: baseUrl, apiKey: s.key, ...(s.protocol === "anthropic" && s.anthropicAuth === "bearer" ? { headers: { Authorization: `Bearer ${s.key}` } } : {}) }, models: Object.fromEntries(s.models.map(model => [requestModelId(s, model), { name: model }])) } } }) };
+    env = { OPENCODE_CONFIG_CONTENT: JSON.stringify({ provider: { [id]: { npm, name: s.name, options: { baseURL: baseUrl, apiKey: s.key, ...(s.protocol === "anthropic" && s.anthropicAuth === "bearer" ? { headers: { Authorization: `Bearer ${s.key}` } } : {}) }, models: Object.fromEntries(s.models.map(model => [requestModelId(s, model), { name: model, limit: { context: limitsForModel(s, model).contextWindow, output: limitsForModel(s, model).maxTokens } }])) } } }) };
   } else {
     command = [engine, "--extension", extensionPath];
     env = { PASEO_MODEL_KEY: s.key, PASEO_MODEL_CONFIG: JSON.stringify({ id, baseUrl, anthropicAuth: s.anthropicAuth, api: s.protocol === "anthropic" ? "anthropic-messages" : s.protocol === "responses" ? "openai-responses" : "openai-completions", models: s.models.map(model => requestModelId(s, model)), modelLabels: Object.fromEntries(s.models.map(model => [requestModelId(s, model), model])), modelLimits: Object.fromEntries(s.models.map(model => [requestModelId(s, model), limitsForModel(s, model)])), contextWindow: s.contextWindow, maxTokens: s.maxTokens }) };

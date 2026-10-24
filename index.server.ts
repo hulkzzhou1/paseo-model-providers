@@ -4,6 +4,7 @@ import { writeFile, mkdir } from "node:fs/promises";
 import agentExtension from "./server/agent-extension";
 import { engines, aliasId, compatible, requestModelId, stateRpc, saveRpc, probeRpc, discoverRpc } from "./shared/contracts";
 import { buildAlias } from "./server/adapters";
+import { writeCodexCatalog } from "./server/codex-models";
 import { storeDir, readStore, writeStore } from "./server/store";
 import { discoverModels } from "./server/models";
 import { probe } from "./server/probe";
@@ -29,11 +30,12 @@ export default function contribute(server: PluginServerContext) {
       await writeFile(extensionPath, `export default ${agentExtension.toString()}\n`, { mode: 0o600 });
       const current = await paseo.config.get();
       const updates: Record<string, Record<string, unknown>> = {};
+      const codexCatalogPath = stored.enabled && stored.agents.includes("codex") ? await writeCodexCatalog(stored, extensionPath) : undefined;
       for (const engine of engines) {
         const id = aliasId(stored.id, engine);
         const existing = current.config.providers[id];
         if (existing && existing.description !== "Managed by model-providers") throw new Error("该供应商标识与已有配置冲突，请使用其他标识");
-        if (stored.agents.includes(engine)) updates[id] = buildAlias(stored, engine, extensionPath);
+        if (stored.agents.includes(engine)) updates[id] = buildAlias(stored, engine, extensionPath, codexCatalogPath);
         else if (existing) updates[id] = { enabled: false };
       }
       const next = state.suppliers.filter(item => item.id !== stored.id).concat(stored);

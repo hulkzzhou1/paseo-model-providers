@@ -78,14 +78,14 @@ const english: Record<string, string> = {
   "模型与 Agent": "Models and agents",
   "模型与路由": "Models and routing",
   "模型填写说明": "Model entry notes",
-  "容量用于 Pi/OMP，支持 K/M；留空沿用原有默认值。": "Pi/OMP limits accept K/M. Leave blank for existing defaults.",
+  "容量支持 K/M；留空沿用原有默认值。": "Limits accept K/M. Leave blank for existing defaults.",
   "请检查接口地址，也可以手动填写模型 ID。": "Check the API URL, or enter model IDs manually.",
   "列表由供应商返回，不代表模型调用权限或推理兼容性已验证。": "Catalog returned by the provider. Model access and inference compatibility are not verified.",
   "供应商没有返回可用目录项，可手动填写。": "The provider returned no usable catalog entries. Add IDs manually.",
   "选择启用的模型，按需映射到网关中的实际 ID。": "Choose enabled models and optionally map aliases to your gateway's API IDs.",
   "Agent 设置": "Agent settings",
   "选择使用此接口的 Agent；容量在各模型行中设置。": "Choose which agents use this endpoint. Set limits in each model row.",
-  "每个模型单独配置容量，支持 K/M 简写；留空使用原有默认值，加载目录会补齐未填写的容量。容量用于 Pi/OMP。": "Set limits per model with K/M shorthand. Blank fields use existing defaults; loading fills missing limits from the catalog. Limits apply to Pi/OMP.",
+  "每个模型单独配置容量，支持 K/M 简写；留空使用原有默认值，加载目录会补齐未填写的容量。": "Set limits per model with K/M shorthand. Blank fields use existing defaults; loading fills missing limits from the catalog.",
   "选择启用的模型，以及与接口协议兼容的 Agent。": "Select enabled models and agents compatible with this protocol.",
   "Codex 需要 OpenAI Responses 协议；Claude 需要 Anthropic Messages 协议。灰色选项表示与当前协议不兼容。": "Codex requires OpenAI Responses. Claude requires Anthropic Messages. Disabled options are incompatible with the selected protocol.",
   "Pi / OMP 模型容量，按实际规格填写": "Pi / OMP model limits: enter the provider's specifications",
@@ -140,7 +140,10 @@ const english: Record<string, string> = {
   "返回结构不符合所选协议": "The response does not match the selected protocol.",
   "连接失败或超时，请检查网络、证书和服务地址": "Connection failed or timed out. Check the network, certificate and URL.",
   "Agent 与接口协议不兼容": "The agent is incompatible with this API protocol.",
-  "地址仅支持 HTTP/HTTPS，不能包含密码、查询参数或片段": "Use an HTTP/HTTPS URL without credentials, query parameters or fragments."
+  "地址仅支持 HTTP/HTTPS，不能包含密码、查询参数或片段": "Use an HTTP/HTTPS URL without credentials, query parameters or fragments.",
+  "上下文用于 Codex、OpenCode、Pi/OMP；最大输出用于 OpenCode、Pi/OMP。Codex 会预留部分上下文，Claude Code 使用自身容量规则。": "Context limits apply to Codex, OpenCode and Pi/OMP; output limits apply to OpenCode and Pi/OMP. Codex reserves some context; Claude Code uses its own capacity rules.",
+  "无法读取 Codex 内置模型目录，请更新 Codex CLI 后重试": "Could not read Codex's bundled model catalog. Update Codex CLI and retry.",
+  "Codex 内置模型目录为空，请更新 Codex CLI 后重试": "Codex's bundled model catalog is empty. Update Codex CLI and retry."
 };
 export function translate(message: string, language: Language): string {
   if (language === "zh-CN") return message;

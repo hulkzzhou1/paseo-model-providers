@@ -22,7 +22,7 @@ export function ModelForm({ t, theme, compact, rows, onChange, message, busy, on
       <Action theme={theme} label={t("添加模型")} onPress={() => onChange([...rows, newModelRow(rows)])} disabled={busy || rows.length >= maxModelRows} icon="Plus" quiet />
       <Action theme={theme} label={busy ? t("正在加载…") : t("加载模型")} onPress={onLoad} disabled={busy} icon="Download" />
     </View>
-    <Text style={muted}>{t("容量用于 Pi/OMP，支持 K/M；留空沿用原有默认值。")}</Text>
+    <Text style={muted}>{t("容量支持 K/M；留空沿用原有默认值。")}</Text>
     {message ? <Text accessibilityRole="alert" style={muted}>{message}</Text> : null}
     <View style={{ gap: 8 }}>
       {rows.map((row, index) => <View key={row.key} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: sizes.controlRadius, overflow: "hidden" }}>
@@ -45,7 +45,8 @@ export function ModelForm({ t, theme, compact, rows, onChange, message, busy, on
     <Disclosure theme={theme} label={t("模型填写说明")} expanded={instructionsOpen} onPress={() => setInstructionsOpen(!instructionsOpen)} />
     {instructionsOpen ? <View style={{ gap: 8 }}>
       <Text style={muted}>{t("每行一个模型；可手动填写，或点击「加载模型」自动填入。实际请求 ID 留空时使用模型 ID。")}</Text>
-      <Text style={muted}>{t("每个模型单独配置容量，支持 K/M 简写；留空使用原有默认值，加载目录会补齐未填写的容量。容量用于 Pi/OMP。")}</Text>
+      <Text style={muted}>{t("每个模型单独配置容量，支持 K/M 简写；留空使用原有默认值，加载目录会补齐未填写的容量。")}</Text>
+      <Text style={muted}>{t("上下文用于 Codex、OpenCode、Pi/OMP；最大输出用于 OpenCode、Pi/OMP。Codex 会预留部分上下文，Claude Code 使用自身容量规则。")}</Text>
     </View> : null}
   </View>;
 }
