@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import ts from 'typescript';
 const module = ts.transpileModule(await readFile(new URL('./messages.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } });
 const { translate, resolveLanguage } = await import('data:text/javascript;base64,' + Buffer.from(module.outputText).toString('base64'));
@@ -10,11 +10,11 @@ for (const [locales, expected] of [
   [['en-US', 'zh-CN'], 'en'], [['zh-CN', 'en-US'], 'zh-CN'],
 ]) assert.equal(resolveLanguage(locales), expected, locales.join(', '));
 let checked = 0;
-for (const file of ['providers.tsx', 'model-form.tsx']) {
+for (const file of (await readdir(new URL('.', import.meta.url))).filter(file => file.endsWith('.tsx'))) {
   const source = ts.createSourceFile(file, await readFile(new URL('./' + file, import.meta.url), 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   function visit(node) {
-    if (ts.isCallExpression(node) && node.expression.getText(source) === 't' && ts.isStringLiteral(node.arguments[0])) {
-      const text = node.arguments[0].text;
+    if (ts.isStringLiteral(node) && /[\u4e00-\u9fff]/.test(node.text)) {
+      const text = node.text;
       assert.equal(translate(text, 'zh-CN'), text);
       assert(!/[\u4e00-\u9fff]/.test(translate(text, 'en')), 'Missing English translation: ' + text);
       checked++;

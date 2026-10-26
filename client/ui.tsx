@@ -3,9 +3,18 @@ import { Platform, Pressable, Text, View, useWindowDimensions, type TextInputPro
 import { Icon, TextInput } from "@getpaseo/plugin/client/react-native";
 import type { PluginScreenProps } from "@getpaseo/plugin/client";
 
-type Theme = PluginScreenProps["theme"];
+export type Theme = PluginScreenProps["theme"];
 export const sizes = { title: 20, heading: 14, section: 14, body: 13, caption: 12, radius: 6, controlRadius: 4, gap: 12, control: 32, touchControl: 44 };
 export const mono = Platform.OS === "ios" ? "Menlo" : "monospace";
+export function workbenchStyles(theme: Theme) {
+  const c = theme.colors;
+  return {
+    page: { flex: 1, minWidth: 0, minHeight: 0, backgroundColor: c.surface0 },
+    toolbar: { flexDirection: "row" as const, alignItems: "center" as const, flexWrap: "wrap" as const, gap: 8 },
+    text: { color: c.foreground, fontSize: sizes.body, lineHeight: 20 },
+    muted: { color: c.foregroundMuted, fontSize: sizes.caption, lineHeight: 18 },
+  };
+}
 export function useControlHeight() {
   const { width } = useWindowDimensions();
   return Platform.OS === "web" && width >= 700 ? sizes.control : sizes.touchControl;
@@ -48,9 +57,9 @@ export function Field({ theme, label, hint, hideLabel, ...input }: TextInputProp
   </View>;
 }
 export function Panel({ theme, icon, title, description, right, children }: { theme: Theme; icon: string; title: string; description?: string; right?: ReactNode; children: ReactNode }) {
-  return <View style={{ borderWidth: 1, borderLeftWidth: 3, borderColor: theme.colors.border, borderLeftColor: theme.colors.accent, borderRadius: sizes.radius, overflow: "hidden", backgroundColor: theme.colors.surface0 }}>
+  return <View style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: sizes.radius, overflow: "hidden", backgroundColor: theme.colors.surface0 }}>
     <View style={{ paddingHorizontal: 10, paddingVertical: 7, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: theme.colors.surface1, borderBottomWidth: 1, borderColor: theme.colors.border }}>
-      <Icon name={icon} size={16} color={theme.colors.accent} />
+      <Icon name={icon} size={15} color={theme.colors.foregroundMuted} />
       <Text accessibilityRole="header" style={{ color: theme.colors.foreground, fontSize: sizes.heading, fontWeight: "600", lineHeight: 20, flex: 1 }}>{title}</Text>
       {right}
     </View>

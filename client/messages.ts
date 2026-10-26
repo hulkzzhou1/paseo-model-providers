@@ -8,6 +8,18 @@ export function resolveLanguage(locales: readonly string[]): Language {
   return "en";
 }
 const english: Record<string, string> = {
+  "全部": "All",
+  "供应商": "providers",
+  "搜索供应商": "Search providers",
+  "名称、地址或模型 ID": "Name, endpoint or model ID",
+  "没有匹配的供应商": "No matching providers",
+  "尝试其他关键词或切换筛选条件。": "Try another keyword or change the filter.",
+  "选择供应商查看模型、容量与 Agent 设置。": "Select a provider to inspect models, limits and agents.",
+  "返回供应商列表": "Back to providers",
+  "正在测试…": "Testing…",
+  "放弃尚未保存的修改？": "Discard unsaved changes?",
+  "继续编辑": "Keep editing",
+  "放弃修改": "Discard changes",
   "请填写有效的接口地址后再获取，也可以手动填写模型 ID。": "Enter a valid API URL or add model IDs manually.",
   "已保存；可在新建 Agent 的供应商列表中选择": "Saved. Select this provider when creating an agent.",
   "保存失败": "Save failed",
