@@ -1,5 +1,7 @@
 # Supplier workbench validation
 
+The page is registered under Settings → Plugins → Model providers; the Command Center opens the same settings route. It contributes no homepage sidebar item or standalone screen. Paseo owns settings scrolling and the centered column; the provider layout measures its own available width.
+
 The workbench adopts the compact toolbars, list/detail separation, neutral panels and draft protection used by the local TAPD and Gongfeng plugins. It keeps Paseo's own modal presentation and existing 0.12 SDK contract.
 
 ## Changed boundaries
@@ -16,7 +18,7 @@ No server, RPC contract, provider adapter, persisted supplier schema or generate
 
 ## Checks
 
-`npm run typecheck`, `npm test` and `git diff --check` pass. Translation checks now inspect Chinese string literals in every client TSX file, including labels stored in tab arrays. Provider filtering tests cover URL, model alias, mapped API ID, agent, combined status filters, empty results and preservation of the original records.
+`npm run typecheck`, `npm test` and `git diff --check` pass. Translation checks now inspect Chinese string literals in every client TSX file, including labels stored in tab arrays. The entry test checks settings registration in both languages, rejects sidebar/standalone-screen registration and verifies Command Center navigation to settings. Provider filtering tests cover URL, model alias, mapped API ID, agent, combined status filters, empty results and preservation of the original records.
 
 Browser checks render the actual components with synthetic React Native, Paseo and RPC fixtures. They are interaction and layout checks, not native-device certification or real supplier inference tests.
 

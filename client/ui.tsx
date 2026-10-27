@@ -9,7 +9,6 @@ export const mono = Platform.OS === "ios" ? "Menlo" : "monospace";
 export function workbenchStyles(theme: Theme) {
   const c = theme.colors;
   return {
-    page: { flex: 1, minWidth: 0, minHeight: 0, backgroundColor: c.surface0 },
     toolbar: { flexDirection: "row" as const, alignItems: "center" as const, flexWrap: "wrap" as const, gap: 8 },
     text: { color: c.foreground, fontSize: sizes.body, lineHeight: 20 },
     muted: { color: c.foregroundMuted, fontSize: sizes.caption, lineHeight: 18 },

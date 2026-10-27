@@ -19,7 +19,7 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node server/test.mjs && node client/messages.test.mjs && node client/token-limits.test.mjs && node client/model-form.test.mjs && node client/providers-state.test.mjs",
+    "test": "node server/test.mjs && node client/messages.test.mjs && node client/token-limits.test.mjs && node client/model-form.test.mjs && node client/providers-state.test.mjs && node client/entry.test.mjs",
     "test:codex": "node server/codex-runtime.test.mjs"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { ActivityIndicator, ScrollView, Text, View, useWindowDimensions } from "react-native";
-import type { PluginScreenProps } from "@getpaseo/plugin/client";
+import { ActivityIndicator, Text, View } from "react-native";
+import type { PluginSurfaceProps } from "@getpaseo/plugin/client";
 import { usePaseo, useRpc } from "@getpaseo/plugin/client";
 import { Icon } from "@getpaseo/plugin/client/react-native";
 import { useQuery } from "@tanstack/react-query";
@@ -14,11 +14,11 @@ import { Action, Field, workbenchStyles } from "./ui";
 import { translate } from "./messages";
 import { useSystemLanguage } from "./language";
 
-export function ProvidersScreen({ theme, layout, navigation }: PluginScreenProps) {
+export function ProvidersScreen({ theme, layout, navigation }: PluginSurfaceProps) {
   const language = useSystemLanguage();
   const t = (message: string) => translate(message, language);
   const styles = workbenchStyles(theme), c = theme.colors;
-  const { width } = useWindowDimensions();
+  const [width, setWidth] = useState(0);
   const split = !layout.compact && width >= 1000;
   const paseo = usePaseo();
   const load = useRpc(stateRpc), probe = useRpc(probeRpc);
@@ -48,11 +48,9 @@ export function ProvidersScreen({ theme, layout, navigation }: PluginScreenProps
     finally { setTesting(current => { const next = { ...current }; delete next[item.id]; return next; }); }
   }
   const showList = split || !selected;
-  return <View style={styles.page}>
+  return <View onLayout={event => setWidth(event.nativeEvent.layout.width)} style={{ minWidth: 0, backgroundColor: c.surface0 }}>
     <View style={{ ...styles.toolbar, flexWrap: "nowrap", paddingHorizontal: layout.compact ? 12 : 16, paddingVertical: 8, borderBottomWidth: 1, borderColor: c.border }}>
-      <Icon name="Network" size={17} color={c.foregroundMuted} />
-      <Text accessibilityRole="header" numberOfLines={1} style={{ ...styles.text, fontWeight: "700", fontSize: 17, flex: 1 }}>{t("模型供应商")}</Text>
-      {!layout.compact && state.data ? <Text style={styles.muted}>{suppliers.length} {t("个供应商 ·")} {suppliers.filter(item => item.enabled).length} {t("个启用")}</Text> : null}
+      {state.data ? <Text style={{ ...styles.muted, flex: 1 }}>{suppliers.length} {t("个供应商 ·")} {suppliers.filter(item => item.enabled).length} {t("个启用")}</Text> : <View style={{ flex: 1 }} />}
       <Action theme={theme} label={t("刷新")} icon="RefreshCw" iconOnly quiet disabled={state.isFetching || available.isFetching} onPress={refresh} />
       <Action theme={theme} label={t("新增供应商")} icon="Plus" primary iconOnly={layout.compact} disabled={!state.data} onPress={() => edit()} />
     </View>
@@ -61,38 +59,38 @@ export function ProvidersScreen({ theme, layout, navigation }: PluginScreenProps
       <Text style={{ ...styles.text, flex: 1 }}>{t("无法读取供应商配置")} · {t("请检查当前主机连接后重试。")}</Text>
       <Action theme={theme} label={t("重新加载")} icon="RefreshCw" disabled={state.isFetching} onPress={() => void state.refetch()} />
     </View> : null}
-    {state.isPending ? <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12 }}>
+    {state.isPending ? <View style={{ padding: 24, alignItems: "center", justifyContent: "center", gap: 12 }}>
       <ActivityIndicator color={c.accent} /><Text style={styles.muted}>{t("正在读取供应商配置…")}</Text>
     </View> : null}
-    {state.data ? <View style={{ flex: 1, minHeight: 0, flexDirection: split ? "row" : "column" }}>
-      {showList ? <View style={{ width: split ? 300 : undefined, flex: split ? undefined : 1, minHeight: 0, borderRightWidth: split ? 1 : 0, borderColor: c.border }}>
+    {state.data ? <View style={{ minWidth: 0, flexDirection: split ? "row" : "column" }}>
+      {showList ? <View style={{ width: split ? 300 : undefined, minWidth: 0, borderRightWidth: split ? 1 : 0, borderColor: c.border }}>
         <View style={{ paddingHorizontal: 12, paddingTop: 12, gap: 8, borderBottomWidth: 1, borderColor: c.border }}>
           <Field theme={theme} label={t("搜索供应商")} hideLabel placeholder={t("名称、地址或模型 ID")} value={query} onChangeText={setQuery} autoCapitalize="none" autoCorrect={false} />
           <View accessibilityRole="tablist" style={styles.toolbar}>
             {([["all", "全部"], ["enabled", "已启用"], ["disabled", "已停用"]] as const).map(([id, label]) => <Action key={id} theme={theme} label={t(label)} selected={filter === id} onPress={() => setFilter(id)} />)}
           </View>
         </View>
-        <ScrollView style={{ flex: 1, minHeight: 0 }} keyboardShouldPersistTaps="handled">
+        <View>
           {visible.map(supplier => <SupplierRow key={supplier.id} theme={theme} supplier={supplier} selected={selected?.id === supplier.id} t={t} onPress={() => setSelectedId(supplier.id)} />)}
           {!visible.length ? <View style={{ padding: 16, gap: 8 }}>
             <Text accessibilityRole="header" style={{ ...styles.text, fontWeight: "600" }}>{suppliers.length ? t("没有匹配的供应商") : t("接入你的第一个模型接口")}</Text>
             <Text style={styles.muted}>{suppliers.length ? t("尝试其他关键词或切换筛选条件。") : t("点击右上方「新增供应商」，填写接口和模型，选择可接入的 Agent 即可开始。")}</Text>
           </View> : null}
-        </ScrollView>
+        </View>
         <View style={{ padding: 12, borderTopWidth: 1, borderColor: c.border }}>
           <Text style={styles.muted}>{visible.length} / {suppliers.length} {t("供应商")}</Text>
         </View>
       </View> : null}
-      {selected ? <View style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+      {selected ? <View style={{ flex: split ? 1 : undefined, minWidth: 0 }}>
         {!split ? <View style={{ ...styles.toolbar, paddingHorizontal: 8, borderBottomWidth: 1, borderColor: c.border }}>
           <Action theme={theme} label={t("返回供应商列表")} icon="ArrowLeft" quiet onPress={() => setSelectedId(null)} />
         </View> : null}
-        <ScrollView style={{ flex: 1, minHeight: 0 }} contentContainerStyle={{ padding: layout.compact ? 12 : 20, paddingBottom: 24 }}>
+        <View style={{ padding: layout.compact ? 12 : 20, paddingBottom: 24 }}>
           <View style={{ width: "100%", maxWidth: 1120, alignSelf: "center" }}>
-            <SupplierDetail key={selected.id} theme={theme} compact={layout.compact || !split} supplier={selected} t={t} testing={Boolean(testing[selected.id])} result={results[selected.id]}
+            <SupplierDetail key={selected.id} theme={theme} compact={layout.compact || width < 700} supplier={selected} t={t} testing={Boolean(testing[selected.id])} result={results[selected.id]}
               onEdit={() => edit(selected)} onTest={() => void test(selected)} onLaunch={() => setLaunch(selected)} />
           </View>
-        </ScrollView>
+        </View>
       </View> : split ? <View style={{ flex: 1, padding: 24, justifyContent: "center", alignItems: "center", gap: 8 }}>
         <Icon name="Network" size={28} color={c.foregroundMuted} />
         <Text style={styles.muted}>{t("选择供应商查看模型、容量与 Agent 设置。")}</Text>

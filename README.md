@@ -24,9 +24,9 @@ Requires Paseo **0.12.0+** on the daemon and clients, with the agent CLIs alread
 paseo plugin add hulkzzhou1/model-providers
 ```
 
-The screen uses a compact workbench: search providers by name, endpoint, model alias, API model ID or agent, and filter by enabled status. Wide windows show a provider list beside its details; narrower windows open details with a back action. The detail view shows model routing and each model’s limits without opening the editor.
+The screen uses a compact workbench: search providers by name, endpoint, model alias, API model ID or agent, and filter by enabled status. The settings column opens provider details with a back action; a sufficiently wide content area shows the list beside its details. The detail view shows model routing and each model’s limits without opening the editor.
 
-Open **Model providers** in the sidebar. The screen and sidebar label follow the device language, using Simplified Chinese when supported and English otherwise. Paseo 0.12.0 does not expose the app's manual language preference to plugins.
+Open **Settings → Plugins → Model providers**. The Command Center shortcut opens the same settings page. The page and settings entry follow the device language, using Simplified Chinese when supported and English otherwise. Paseo 0.12.0 does not expose the app's manual language preference to plugins.
 
 1. Select **Add provider** and choose **Custom** or the **DeepSeek** preset. Presets fill in defaults; the name, protocol, API base URL, models and limits remain editable. You can use a compatible proxy or gateway URL. Enter your API key after selecting a preset.
 2. Select **Load models** to fill the model form automatically from the standard model endpoint. Use **Add model** for manual entries and remove rows you do not want to enable. Each row has a model ID and an optional API model ID; no comma-separated or multiline input is needed.
