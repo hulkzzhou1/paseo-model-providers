@@ -55,6 +55,24 @@ try {
  const customDeepseek={...deepseek,key:'test-only-key',baseUrl:'https://gateway.example.com/custom/v1'};
  assert.equal(supplierSchema.parse(customDeepseek).baseUrl,customDeepseek.baseUrl);
  assert.equal(JSON.parse(buildAlias(customDeepseek,'opencode','').env.OPENCODE_CONFIG_CONTENT).provider['mp-deepseek-opencode'].options.baseURL,customDeepseek.baseUrl);
+ const openrouter=supplierPresets.openrouter;
+ assert.deepEqual(openrouter.models,[],'OpenRouter models must come from discovery or manual input');
+ assert.equal(supplierSchema.safeParse(openrouter).success,false,'A preset without selected models cannot be saved yet');
+ assert.deepEqual(openrouter.agents,['opencode','pi','omp']);
+ assert(openrouter.agents.every(engine=>compatible(openrouter.protocol,engine)));
+ globalThis.fetch=async(url,options)=>{
+  assert.equal(url,'https://openrouter.ai/api/v1/models');
+  assert.equal(options.headers.Authorization,'Bearer test-only-router-key');
+  assert.equal(options.redirect,'error');
+  return Response.json({data:[{id:'vendor/model',name:'Model',context_length:1000000,top_provider:{context_length:128000,max_completion_tokens:16000}}]});
+ };
+ const routerCatalog=await discoverModels({...openrouter,key:'test-only-router-key'});
+ assert.equal(routerCatalog.ok,true);
+ assert.deepEqual(routerCatalog.models,[{id:'vendor/model',name:'Model',contextWindow:128000,maxTokens:16000}]);
+ const configuredRouter=supplierSchema.parse({...openrouter,models:['vendor/model'],modelLimits:{'vendor/model':{contextWindow:128000,maxTokens:16000}},baseUrl:'https://gateway.example.com/router/v1'});
+ const routerConfig=JSON.parse(buildAlias({...configuredRouter,key:'test-only-router-key'},'opencode','').env.OPENCODE_CONFIG_CONTENT).provider['mp-openrouter-opencode'];
+ assert.equal(routerConfig.options.baseURL,configuredRouter.baseUrl);
+ assert.deepEqual(routerConfig.models['vendor/model'].limit,{context:128000,output:16000});
  assert.equal(compatible('chat-completions','codex'),false);
  assert.equal(compatible('responses','claude'),false);
  for(const [engine,protocol] of [['claude','anthropic'],['codex','responses'],['opencode','chat-completions'],['pi','responses'],['omp','anthropic']]) {

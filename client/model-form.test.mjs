@@ -12,6 +12,10 @@ const model = id => ({id, name:id});
 assert.deepEqual(mergeModelRows([{key:0,id:'',apiId:''}], [model('a'),model('b')]), {
   rows:[{key:0,id:'a',apiId:'a'},{key:1,id:'b',apiId:'b'}],omitted:0,
 });
+const { supplierPresets } = await import(dataUrl(compile(await readFile(new URL('../shared/presets.ts',import.meta.url),'utf8'))));
+assert.deepEqual(supplierModelRows(supplierPresets.openrouter),[{key:0,id:'',apiId:''}]);
+const routerRows=mergeModelRows(supplierModelRows(supplierPresets.openrouter),[{id:'vendor/model',name:'Model',contextWindow:128000,maxTokens:16000}]);
+assert.deepEqual(routerRows,{rows:[{key:0,id:'vendor/model',apiId:'vendor/model',contextWindow:'128K',maxTokens:'16K'}],omitted:0},'Loading an OpenRouter preset must replace its empty row and fill per-model capacities');
 const manual = [{key:4,id:'friendly-alias',apiId:'gateway/actual'}, {key:8,id:'manual-model',apiId:''}];
 const original = structuredClone(manual);
 const result = mergeModelRows(manual, [model('gateway/actual'),model('friendly-alias'),model('new-model'),model('new-model')]);

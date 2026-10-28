@@ -28,13 +28,15 @@ The screen uses a compact workbench: search providers by name, endpoint, model a
 
 Open **Settings → Plugins → Model providers**. The Command Center shortcut opens the same settings page. The page and settings entry follow the device language, using Simplified Chinese when supported and English otherwise. Paseo 0.12.0 does not expose the app's manual language preference to plugins.
 
-1. Select **Add provider** and choose **Custom** or the **DeepSeek** preset. Presets fill in defaults; the name, protocol, API base URL, models and limits remain editable. You can use a compatible proxy or gateway URL. Enter your API key after selecting a preset.
+1. Select **Add provider** and choose **Custom**, **DeepSeek** or **OpenRouter**. Presets fill in defaults; the name, protocol, API base URL, models and limits remain editable. You can use a compatible proxy or gateway URL. Enter your API key after selecting a preset.
 2. Select **Load models** to fill the model form automatically from the standard model endpoint. Use **Add model** for manual entries and remove rows you do not want to enable. Each row has a model ID and an optional API model ID; no comma-separated or multiline input is needed.
 3. Edit the **API model ID** in a model row to map an alias, such as `deepseek-flash` → `gateway/deepseek`. Pickers display the model ID; connection tests and agents use the API model ID. Leave the API ID blank to use the model ID itself. Model IDs and API model IDs must each be unique within a provider.
 4. Set context and output limits **in each model row**, then select compatible agents and save. Codex receives each model’s context window through a native model catalog; OpenCode and Pi/OMP receive context and output limits, including mapped models. Full token counts and K/M shorthand are supported (`1K = 1000` tokens). Loading fills missing limits from catalog metadata and preserves manually entered values. Blank fields inherit the provider’s existing defaults, so old records retain their limits without migration.
 5. Run **Test connection**, then **Create agent** with an absolute working directory on the daemon. Generated provider entries also appear in Paseo's normal agent picker.
 
 The DeepSeek preset uses Chat Completions with `deepseek-flash` and `deepseek-v4-pro`. Defaults were checked against the [official model metadata](https://api-docs.deepseek.com/api/list-models/) on 2026-10-22; fetch the catalog to check current availability. A custom gateway can have different limits.
+
+The OpenRouter preset uses the [official Chat Completions endpoint](https://openrouter.ai/docs/quickstart), with base URL `https://openrouter.ai/api/v1` and OpenCode, Pi and OMP selected. It starts without model IDs: enter your key, then **Load models** or add IDs manually before saving. The standard `/models` response supplies per-model context and output limits when available. Keep only the models you want; the form loads up to 100 entries and reports any omitted models. Missing capacities fall back to 32,768 context and 4,096 output tokens; verify these against the selected model. Loading the catalog does not verify inference or tool support.
 
 ![Provider editor with sample data](assets/editor-en.png)
 
